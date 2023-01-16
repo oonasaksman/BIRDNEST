@@ -1,6 +1,7 @@
 // server/index.js
 const path = require('path');
 const express = require("express");
+var bodyParser = require('body-parser');
 var axios = require('axios');
 const request = require('request');
 
@@ -40,7 +41,9 @@ app.use(express.static(path.resolve(__dirname, '../frontend/build')));
 
 // });
 
-app.get("/api", (req, res) => {
+
+//TODO: ADD ERROR CODES
+app.get("/api/drones", (req, res) => {
 
 var axios = require('axios');
 
@@ -60,6 +63,63 @@ axios(config)
 });
 
 });
+
+
+
+app.post("/api/users", (req, res) => {
+
+  var axios = require('axios');
+  var dataObj = {};
+
+  const chunks = [];
+  req.on("data", (chunk) => {
+    chunks.push(chunk);
+  });
+  req.on("end", () => {
+    console.log("all parts/chunks have arrived");
+    const data = Buffer.concat(chunks);
+    const stringData = data.toString();
+    console.log("stringData: ", stringData);
+    const parsedData = new URLSearchParams(stringData);
+    for (var pair of parsedData.entries()) {
+      dataObj[pair[0]] = pair[1];
+    }
+
+    var config = {
+      method: 'get',
+      url: 'http://assignments.reaktor.com/birdnest/pilots/' + dataObj.serialNumber,
+      headers: {'Content-Type': 'application/json'}
+    };
+  
+    axios(config)
+    .then(function (response) {
+      res.json(response.data)
+      console.log(response.data);
+    })
+    .catch(function (error) {
+      console.log("404");
+      console.log('http://assignments.reaktor.com/birdnest/pilots/' + dataObj.serialNumber);
+    });
+
+  })
+  
+
+  // var config = {
+  //   method: 'get',
+  //   url: 'http://assignments.reaktor.com/birdnest/pilots/' + dataObj.serialNumber,
+  //   headers: {'Content-Type': 'application/json'}
+  // };
+
+  // axios(config)
+  // .then(function (response) {
+  //   res.json(response.data)
+  //   console.log(response.data);
+  // })
+  // .catch(function (error) {
+  //   console.log("404");
+  // });
+  
+  });
 
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
