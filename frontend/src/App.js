@@ -1,37 +1,20 @@
 import "./App.css";
 import { useEffect, useState } from "react";
-import XMLParser from "react-xml-parser";
 import axios from "axios";
-import Decimal from "decimal.js";
 import qs from "qs";
 
 function App() {
-  //const [drones, setDrones] = useState(null);
   const [closeDrones, setCloseDrones] = useState({});
-  // const [positionY, setPositionY] = useState([]);
-  // const [positionX, setPositionX] = useState([]);
-  // const [serialNumbers, setSerialNumbers] = useState([]);
 
   useEffect(() => {
-    let id = setInterval(getDrones, 5000);
+    let id = setInterval(getDrones, 2000);
     return () => clearInterval(id);
-  }, []);
+  });
 
   const getDrones = () => {
-    axios
-      .get("/api/drones")
-      //.then((res) => res.text())
-      .then((droneXml) => {
-        console.log(droneXml.data);
-        parseXml(droneXml.data);
-        //setDrones(droneXml.data);
-        //const numArray = parseXml(droneXml.data);
-        //console.log(parseXml(droneXml.data));
-        // const eka = Number(numArray[0]);
-        // const tok = Number(numArray[1]);
-
-        //console.log(zoneCalculator(parseXml(droneXml.data)));
-      });
+    axios.get("/api/drones").then((droneXml) => {
+      parseXml(droneXml.data);
+    });
   };
 
   const parseXml = (drones) => {
@@ -39,90 +22,63 @@ function App() {
     let xml = doc.firstChild;
     let droneList = xml.getElementsByTagName("drone");
     let date = getDate();
-    console.log(droneList);
     let arrY = [];
     for (let x = 0; x < droneList.length; x++) {
       arrY.push(droneList[x].childNodes[15].innerHTML);
     }
-    //setPositionY(arrY);
     let arrX = [];
     for (let x = 0; x < droneList.length; x++) {
       arrX.push(droneList[x].childNodes[17].innerHTML);
     }
-    //setPositionX(arrX);
     let arrS = [];
     for (let x = 0; x < droneList.length; x++) {
       arrS.push(droneList[x].childNodes[1].innerHTML);
     }
-
+    //Looping through drones from snapshot
     for (let x = 0; x < droneList.length; x++) {
-      //if drone is too close and not already in json
-      if (isClose(arrX[x], arrY[x]) && !closeDrones[arrS[x]]) {
-        //for(let y = 0; y < arrS.length; y++){
+      let serialNum = arrS[x];
+
+      //Add drone to UseState objec
+      if (isClose(arrX[x], arrY[x])) {
         droneOwner(arrS[x]).then((result) => {
           let update = {};
+          let distance = howFar(arrX[x], arrY[x]);
           update = {
-            [arrS[x]]: {
-              positionX: arrX[x],
-              positionY: arrY[x],
-              time: date,
-              firstName: result.firstName,
-              lastName: result.lastName,
-              email: result.email,
-              phoneNumber: result.phoneNumber,
-            },
+            positionX: arrX[x],
+            positionY: arrY[x],
+            distance: distance,
+            time: date,
+            firstName: result.firstName,
+            lastName: result.lastName,
+            email: result.email,
+            phoneNumber: result.phoneNumber,
           };
-          setCloseDrones((closeDrones) => ({
-            ...update,
+          setCloseDrones({
             ...closeDrones,
-          }));
-          console.log(result, [arrS[x]]);
-          // setCloseDrones({
-          //   [arrS[x]]: {
-          //               positionX: arrX[x],
-          //               positionY: arrY[x],
-          //               time: time[0].innerHTML,
-          //               firstName: result.firstName,
-          //               lastName: result.lastName,
-          //               email: result.email,
-          //               phoneNumber: result.phoneNumber
-          //               }});
-          //setCloseDrones({meeps: "meep morp", ...closeDrones})
-          console.log("too close");
-          console.log(JSON.stringify(closeDrones));
+            [serialNum]: { ...update },
+          });
         });
-        //}
-      }
-      //too close but already in json
-      else if (
-        isClose(arrX[x], arrY[x]) &&
-        closeDrones[arrS[x]] &&
-        howFar(arrX[x], arrY[x]) <
-          howFar(closeDrones[arrS[x]][0], closeDrones[arrS[x]][1])
-      ) {
       }
     }
-    //console.log(isClose(188106.66769, 171648.743947))
-    return arrX;
   };
 
+  //Returns current date and time
   const getDate = () => {
     var today = new Date(),
       date =
         today.getHours() +
         "." +
         today.getMinutes() +
-        "-" +
+        ", " +
         today.getDate() +
         "." +
         (today.getMonth() + 1) +
         "." +
         today.getFullYear();
-    console.log(date);
     return date;
   };
 
-  //calculates distance from nest to drone
+  //Calculates distance from nest to drone
   const howFar = (coX, coY) => {
     let minus = coY - 250000;
     let minus2 = coX - 250000;
@@ -133,7 +89,7 @@ function App() {
     return distance;
   };
 
-  //returns true if drone is too close
+  //Returns true if drone is too close
   const isClose = (coX, coY) => {
     const radius = 100000.0;
     let distance = howFar(coX, coY);
@@ -143,15 +99,7 @@ function App() {
     return false;
   };
 
-  // const forLoop = async () => {
-
-  //   for (let index = 0; index < fruitsToGet.length; index++) {
-  //     const fruit = fruitsToGet[index]
-  //     const numFruit = await getNumFruit(fruit)
-  //     console.log(numFruit)
-  //   }
-  // }
-
+  //Gets info of drone owner
   const droneOwner = async (serialNumber) => {
     var data = qs.stringify({
       serialNumber: serialNumber,
@@ -169,27 +117,46 @@ function App() {
       const response = await axios(config);
       return response.data;
     } catch (error) {
-      console.log("404");
-      return "could not retrieve owner info";
+      console.log("404", error);
+      return {
+        email: "could not retrieve",
+        firstName: "unknown",
+        lastName: "owner",
+        phoneNumber: "could not retrieve",
+      };
     }
   };
-
-  // <p>{!drones ? "Loading..." : drones}</p>
-  // {drones ? console.log(parseXml(drones)) : ""}
 
   return (
     <div className="App">
       <header className="App-header">
         <div>
           {Object.keys(closeDrones).map((item, i) => (
-            <li className="travelcompany-input" key={i}>
-              <span className="input-label">
-                {closeDrones[item].lastName + "----"}
-              </span>
-              <span className="input-label">
-                {closeDrones[item].time + "----"}
-              </span>
-              <span className="input-label">{closeDrones[item].positionX}</span>
+            <li className="drone" key={i}>
+              <p>
+                <span className="input-label">
+                  {closeDrones[item].firstName +
+                    " " +
+                    closeDrones[item].lastName +
+                    "'s drone "}
+                </span>
+                <span className="input-label">
+                  {"spotted at (" +
+                    closeDrones[item].positionX +
+                    ", " +
+                    closeDrones[item].positionY +
+                    ")  "}
+                </span>
+                <span className="input-label">
+                  {closeDrones[item].time + ", "}
+                </span>
+                <span className="input-label">
+                  {"email: " + closeDrones[item].email + ", "}
+                </span>
+                <span className="input-label">
+                  {"phone: " + closeDrones[item].phoneNumber}
+                </span>
+              </p>
             </li>
           ))}
         </div>

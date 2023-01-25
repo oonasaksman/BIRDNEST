@@ -37,6 +37,7 @@ app.post("/api/users", (req, res) => {
   var dataObj = {};
   res.header({ "Access-Control-Allow-Origin": "*" });
 
+  //Retrieve serial number from the request
   const chunks = [];
   req.on("data", (chunk) => {
     chunks.push(chunk);
@@ -68,7 +69,6 @@ app.post("/api/users", (req, res) => {
       })
       .catch(function (error) {
         console.log(error);
-        //console.log("errorbutwontsay: ", response.data);
         console.log(
           "http://assignments.reaktor.com/birdnest/pilots/" +
             dataObj.serialNumber
