@@ -1,2 +1,2 @@
 # BIRDNEST
-Pre-assignment for Reaktor.
+Unfinished pre-assignment.
